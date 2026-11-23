@@ -9,6 +9,9 @@
 - No usar datos reales de clientes ni de la empresa. Usar solo los estados financieros públicos de los intermediarios.
 - El analista hace este proceso manualmente cada trimestre; la app debe reproducir ese mismo paso a paso sin interpretar criterios de negocio que no estén escritos.
 - Si el PDF de un intermediario no se puede descargar o leer, la app debe continuar con los demás y reportar el fallo al final, no detenerse.
+- **Criterio rector del área:** entre dejar un vacío y escribir un dato probable, se deja el vacío. Un dato equivocado que parece correcto es el peor resultado posible, porque llega al informe de la Junta Directiva sin que nadie lo note.
+- Las cifras del CSV son **acumuladas del año** (enero a la fecha de corte). Nunca se suman filas para obtener un acumulado ni se mezclan valores de solo el trimestre.
+- El histórico es **de solo agregar**: no se reescriben, corrigen ni borran filas existentes.
 
 ## 2. Tecnología
 
@@ -57,6 +60,8 @@ Entregable histórico. Características detectadas:
 - **Separador:** `;`
 - **Decimales:** coma `,`; **miles:** punto `.`
 - **Valores nulos / ausentes:** celdas vacías, `?` al inicio, o `?-   ` (guion con espacios).
+- **Período:** `Título` es el año de corte y `Mes` el mes de corte (Marzo, Junio, Septiembre, Diciembre). No es la fecha de publicación del PDF.
+- **Nombres unificados al consultar:** las filas históricas pueden decir `Davivienda` o `DaviBank`; ambas se conservan tal cual en el archivo y se tratan como un solo intermediario al consultar y filtrar. El archivo no se reescribe.
 - **16 columnas en orden:**
   1. `Título` (año, ej. 2026; a veces con espacio al final, ej. `2018 `)
   2. `Mes` (Marzo, Junio, Septiembre, Diciembre)
@@ -92,13 +97,29 @@ Registros actuales: 1.394 filas de datos (2015–2026). 44 intermediarios distin
 **Reglas de negocio escritas:**
 - Cada trimestre se busca en los enlaces de `Links.txt` el estado de resultados vigente y se agrega al historial del CSV.
 - No hay clasificación de categorías (no hay umbrales de rentabilidad, tamaño, etc.). El entregable es la acumulación de registros en el CSV.
-- Davivienda = DaviBank: unificar nombre antes de escribir en el CSV.
+- Davivienda = DaviBank: las filas nuevas se escriben como `DaviBank`; las filas históricas no se reescriben y la unión de los dos nombres se hace al consultar.
 - Los campos `Tipo de elemento` y `Ruta de acceso` son metadatos de SharePoint y se conservan tal cual al agregar filas nuevas.
 - Si un valor no está en el PDF, se deja vacío en el CSV.
+- Las cifras son acumuladas del año (enero a la fecha de corte), tal como las publica el intermediario.
 
 **Resultado esperado:**
 - El CSV de `resultados/` crece con una fila nueva por intermediario y trimestre procesado.
 - Cada fila tiene los 16 campos con el formato descrito en la sección 4.
+
+**Qué resultado es inaceptable para el área:**
+Un dato equivocado que parece correcto. El área prefiere un vacío, porque el vacío se investiga y el número falso pasa inadvertido al informe de la Junta Directiva y al indicador de participación de mercado. También son inaceptables el trimestre duplicado, las cifras de períodos mezclados y el trimestre presentado como completo cuando faltan intermediarios.
+
+**Excepciones y casos especiales (aclaradas con el área):**
+1. **Acumulado, no trimestre.** Una fila con `Mes` = Junio contiene enero a junio. No se suman filas para obtener el acumulado del año ni se completa un acumulado con datos de solo un trimestre.
+2. **Reporte no publicado.** Si un intermediario no publicó su estado financiero del trimestre, o publicó uno con otro corte, **no se crea la fila**; se informa como "no publicado" en el resumen del proceso.
+3. **Dato faltante dentro de un reporte publicado.** Si el reporte existe pero un valor no está o no es legible, **sí se crea la fila**, la celda queda vacía y el intermediario/trimestre se marca como incompleto.
+4. **Nunca se imputa.** No se rellena un vacío con cero, con el valor del trimestre anterior ni con un cálculo propio.
+5. **Activo y Patrimonio son saldos.** Salen del estado de situación (balance) a la fecha de corte, no del estado de resultados; no son flujos del período.
+6. **Columna del período actual.** Cuando el PDF trae dos columnas (período actual y período comparativo del año anterior), se toma la del período actual. La comparativa nunca se usa.
+7. **Corte y publicación son cosas distintas.** `Título` es el año de corte, `Mes` es el mes de corte. Un reporte publicado en julio con corte a junio pertenece a Junio.
+8. **Los negativos son válidos.** Una utilidad neta negativa (pérdida) es un dato correcto y se conserva con su signo; no es un error de extracción.
+9. **Trazabilidad al PDF.** La verificación manual del analista es releer el dato contra el PDF. El resumen del proceso debe indicar de qué archivo salió cada fila, sin agregar columnas al CSV.
+10. **La app no opina.** No calcula indicadores, no clasifica intermediarios, no cuadra la fila aritméticamente, no compara contra el trimestre anterior y no corrige lo que el PDF dice.
 
 **Casos de control (para verificar la extracción manualmente):**
 
@@ -106,7 +127,10 @@ Registros actuales: 1.394 filas de datos (2015–2026). 44 intermediarios distin
 |---|---|---|---|---|---|
 | 1251 | 2025 | Diciembre | BN Seguros | +5.911.008.333,00 | Valor positivo grande; campo 12 es `?5.911.008.333,00` |
 | 887 | 2023 | Marzo | Unity | -151.012.424,00 | Valor negativo; campo 12 es `-?151.012.424,00` |
-| 32 | 2015 | Junio | Uniserse | (vacío) | Campo 12 vacío entre `;;` |
+| 427 | 2015 | Marzo | Unity | (vacío) | Campo 12 vacío entre `;`; sí tiene col. 5, 13 y 14 |
+| 409 | 2016 | Diciembre | Marsh Asprose | (vacío) | Fila casi vacía: solo col. 5; las demás columnas de datos quedan vacías |
+
+> Corrección: el caso anterior usaba la línea 32 (Uniserse, 2015 Junio) como "Utilidad Neta vacía", pero esa fila sí tiene `?48.582.060,00` en la columna 12. Allí lo vacío son las columnas 4, 7, 8 y 11. Se reemplazó por los casos 427 y 409, verificados contra el archivo.
 
 **Cómo verificar a mano un caso de control:**
 1. Abrir el CSV con separador `;` y codificación Windows-1252.
