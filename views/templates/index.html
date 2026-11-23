@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block contenido %}
+<section class="aviso">
+  <p>
+    <strong>Version de validacion.</strong>
+    Esta pantalla confirma que el despliegue, el puerto y el entorno funcionan.
+    La descarga de los PDF, la lectura de los estados financieros y la carga al
+    historico todavia no estan construidas.
+  </p>
+</section>
+
+<div class="acciones">
+  <button type="button" class="boton" disabled>Importar insumos</button>
+  <button type="button" class="boton boton--principal" disabled>Ejecutar proceso</button>
+  <button type="button" class="boton" disabled>Exportar resultados</button>
+</div>
+
+<section class="tarjetas">
+  <article class="tarjeta">
+    <span class="tarjeta__etiqueta">Ultimo trimestre procesado</span>
+    <span class="tarjeta__valor">{{ estado.ultimo_trimestre }}</span>
+  </article>
+  <article class="tarjeta">
+    <span class="tarjeta__etiqueta">Registros en pantalla</span>
+    <span class="tarjeta__valor">{{ estado.registros }}</span>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>Entorno del despliegue</h2>
+  <dl class="detalle">
+    <dt>Version de Python</dt>
+    <dd>{{ entorno.python }}</dd>
+    <dt>Sistema</dt>
+    <dd>{{ entorno.plataforma }}</dd>
+    <dt>Puerto</dt>
+    <dd>{{ entorno.puerto }}</dd>
+    <dt>Verificacion de vida</dt>
+    <dd><a href="{{ url_for('principal.salud') }}">/salud</a></dd>
+  </dl>
+</section>
+{% endblock %}

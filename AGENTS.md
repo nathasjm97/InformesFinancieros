@@ -2,7 +2,7 @@
 
 ## 1. Reglas para el agente
 
-- No construir la app todavía: este archivo solo especifica el contrato de arquitectura y negocio.
+- Estado del proyecto: existe un **esqueleto de despliegue** (arranque de Flask, ruta `/` y ruta de verificación de vida `/salud`). La descarga de PDF, la extracción de campos y la carga al CSV todavía no se construyen; este archivo es el contrato de arquitectura y negocio que deben respetar.
 - Toda extracción de datos debe hacerse desde los PDF de estados financieros publicados en los enlaces de `insumos/Links.txt`.
 - No inventar datos. Si un valor no está legible o falta en el PDF, dejarlo vacío en el CSV y registrar el intermediario/trimestre como incompleto.
 - Davivienda y DaviBank son el mismo intermediario (fusión/adquisición). Unificar bajo el nombre `DaviBank` en todas las capas.
